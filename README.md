@@ -57,6 +57,15 @@ sudo mount -t vboxsf docker /www
 
 ##### 第六步
 
+> 重载容器
+
+```
+docker-compose down
+docker-compose up -d nginx mysql
+```
+
+##### 第七步
+
 > 安装laravel
 
 ```
@@ -64,16 +73,11 @@ docker exec -it laradock_workspace_1 bash
 composer create-project laravel/laravel bms "5.3.*"
 ```
 
-##### 第七步
-
-> 重建容器
-
-```
-docker-compose down
-docker-compose up -d nginx mysql
-```
-
 ##### 第八步
+
+> 重复第六步
+
+##### 第九步
 
 > 在浏览器输入docker主机的IP
 
