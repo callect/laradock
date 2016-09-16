@@ -22,7 +22,7 @@
 > 在GIT终端中（任何支持tty的终端，如docker quickstart,mintty等）进入docker目录
 
 ```
-git clone https://github.com/bamaso/laradock.git
+git clone https://github.com/callect/laradock.git
 cd laradock
 ```
 
