@@ -82,3 +82,24 @@ composer create-project laravel/laravel bms "5.3.*"
 > 在浏览器输入docker主机的IP
 
 **Bingo!**
+
+
+
+#### 问题调试
+
+##### 安装nodejs组件出现了 error, symlink
+
+> 使用-no-bin-links参数
+
+```
+npm install bower --registry=http://r.cnpmjs.org --no-bin-links
+```
+
+##### 安装nodejs组件时提示没有权限
+
+> 运行容器时指定用户：laradock
+
+```
+docker exec -it --user=laradock laradock_workspace_1 bash
+```
+
