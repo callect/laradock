@@ -3,6 +3,12 @@
 # Image Setup
 #--------------------------------------------------------------------------
 #
+# To edit the 'workspace' base Image, visit its repository on Github
+#    https://github.com/LaraDock/workspace
+#
+# To change its version, see the available Tags on the Docker Hub:
+#    https://hub.docker.com/r/laradock/workspace/tags/
+#
 
 FROM laradock/workspace:1.1
 
@@ -31,6 +37,7 @@ MAINTAINER Mahmoud Zalt <mahmoud@zalt.me>
 #   - INSTALL_MONGO=            false
 #   - COMPOSER_GLOBAL_INSTALL=  false
 #   - INSTALL_NODE=             false
+#   - INSTALL_DRUSH=            false
 #
 
 #####################################
@@ -42,10 +49,35 @@ ARG INSTALL_XDEBUG=true
 ENV INSTALL_XDEBUG ${INSTALL_XDEBUG}
 RUN if [ ${INSTALL_XDEBUG} = true ]; then \
     # Load the xdebug extension only with phpunit commands
+    apt-get update && \
     apt-get install -y --force-yes php7.0-xdebug && \
     sed -i 's/^/;/g' /etc/php/7.0/cli/conf.d/20-xdebug.ini && \
     echo "alias phpunit='php -dzend_extension=xdebug.so /var/www/laravel/vendor/bin/phpunit'" >> ~/.bashrc \
 ;fi
+# ADD for REMOTE debugging
+COPY ./xdebug.ini /etc/php/7.0/cli/conf.d/xdebug.ini
+
+
+#####################################
+# ssh:
+#####################################
+
+# Check if ssh needs to be installed
+# See: https://github.com/phusion/baseimage-docker#enabling_ssh
+ADD insecure_id_rsa /tmp/id_rsa
+ADD insecure_id_rsa.pub /tmp/id_rsa.pub
+ARG INSTALL_WORKSPACE_SSH=true
+ENV INSTALL_WORKSPACE_SSH ${INSTALL_WORKSPACE_SSH}
+RUN if [ ${INSTALL_WORKSPACE_SSH} = true ]; then \
+    rm -f /etc/service/sshd/down && \
+    cat /tmp/id_rsa.pub >> /root/.ssh/authorized_keys \
+        && cat /tmp/id_rsa.pub >> /root/.ssh/id_rsa.pub \
+        && cat /tmp/id_rsa >> /root/.ssh/id_rsa \
+        && rm -f /tmp/id_rsa* \
+        && chmod 644 /root/.ssh/authorized_keys /root/.ssh/id_rsa.pub \
+    && chmod 400 /root/.ssh/id_rsa \
+;fi
+
 
 #####################################
 # MongoDB:
@@ -70,7 +102,6 @@ ARG PGID=1000
 RUN groupadd -g $PGID laradock && \
     useradd -u $PUID -g laradock -m laradock
 
-
 #####################################
 # Composer:
 #####################################
@@ -82,7 +113,7 @@ COPY ./composer.json /home/laradock/.composer/composer.json
 RUN chown -R laradock:laradock /home/laradock/.composer
 USER laradock
 
-# Check if global install need to be runned
+# Check if global install need to be ran
 ARG COMPOSER_GLOBAL_INSTALL=true
 ENV COMPOSER_GLOBAL_INSTALL ${COMPOSER_GLOBAL_INSTALL}
 RUN if [ ${COMPOSER_GLOBAL_INSTALL} = true ]; then \
@@ -91,10 +122,28 @@ RUN if [ ${COMPOSER_GLOBAL_INSTALL} = true ]; then \
 ;fi
 
 #####################################
+# Drush:
+#####################################
+USER root
+ENV DRUSH_VERSION 8.1.2
+ARG INSTALL_DRUSH=true
+ENV INSTALL_DRUSH ${INSTALL_DRUSH}
+RUN if [ ${INSTALL_DRUSH} = true ]; then \
+    # Install Drush 8 with the phar file.
+    curl -fsSL -o /usr/local/bin/drush https://github.com/drush-ops/drush/releases/download/$DRUSH_VERSION/drush.phar | bash && \
+    chmod +x /usr/local/bin/drush && \
+    drush core-status \
+;fi
+
+USER laradock
+
+#####################################
 # Node / NVM:
 #####################################
 
 # Check if NVM needs to be installed
+ARG NODE_VERSION=stable
+ENV NODE_VERSION ${NODE_VERSION}
 ARG INSTALL_NODE=true
 ENV INSTALL_NODE ${INSTALL_NODE}
 ENV NVM_DIR /home/laradock/.nvm
@@ -103,10 +152,11 @@ RUN if [ ${INSTALL_NODE} = true ]; then \
     curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.6/install.sh | bash && \
         . ~/.nvm/nvm.sh && \
         NVM_NODEJS_ORG_MIRROR=https://npm.taobao.org/mirrors/node nvm install stable && \
-        nvm use stable && \
-        nvm alias stable && \
+        nvm install ${NODE_VERSION} && \
+        nvm use ${NODE_VERSION} && \
+        nvm alias ${NODE_VERSION} && \
         npm install -g cnpm --registry=https://registry.npm.taobao.org && \
-        cnpm install -g gulp bower vue-cli \
+        cnpm install -g gulp bower vue-router vuex \
 ;fi
 
 # Wouldn't execute when added to the RUN statement in the above block
@@ -115,6 +165,31 @@ RUN if [ ${INSTALL_NODE} = true ]; then \
     echo "" >> ~/.bashrc && \
     echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.bashrc && \
     echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm' >> ~/.bashrc \
+;fi
+
+#####################################
+# PHP Aerospike:
+#####################################
+USER root
+ARG INSTALL_AEROSPIKE_EXTENSION=true
+ENV INSTALL_AEROSPIKE_EXTENSION ${INSTALL_AEROSPIKE_EXTENSION}
+# Copy aerospike configration for remote debugging
+COPY ./aerospike.ini /etc/php/7.0/cli/conf.d/aerospike.ini
+RUN if [ ${INSTALL_AEROSPIKE_EXTENSION} = true ]; then \
+    # Install the php aerospike extension
+    curl -L -o /tmp/aerospike-client-php.tar.gz "https://github.com/luciano-jr/aerospike-client-php/archive/master.tar.gz" \
+    && mkdir -p aerospike-client-php \
+    && tar -C aerospike-client-php -zxvf /tmp/aerospike-client-php.tar.gz --strip 1 \
+    && ( \
+        cd aerospike-client-php/src/aerospike \
+        && phpize \
+        && ./build.sh \
+        && make install \
+    ) \
+    && rm /tmp/aerospike-client-php.tar.gz \
+;fi
+RUN if [ ${INSTALL_AEROSPIKE_EXTENSION} = false ]; then \
+    rm /etc/php/7.0/cli/conf.d/aerospike.ini \
 ;fi
 
 #

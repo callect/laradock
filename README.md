@@ -1,105 +1,49 @@
-# laradock
-基于LaraDock/laradock LaraDock-ToolBox分支，手动补丁至4.05+多虚拟站点支持
+# LaraDock
 
-##### 特点
 
-- 安装了加速器，加快镜像拉取速度
-- 使用国内镜像安装node
-- 其它见原项目https://github.com/LaraDock/laradock#features
+![](https://s31.postimg.org/nbettdki3/lara_dock_poster_new.jpg)
 
-> 1. 操作之前需要在windows里新建个目录用于存放laradock配置及源码文件 如E:\docker，以下称为docker目录,写做docker/
-> 2. 前往www.daocloud.io注册帐号，在用户中心菜单第一项找到加速器，点击进入，复制下专属加速地址
 
-##### 第一步
 
-> 1. 建立docker主机，建议主机名为default
-> 2. 在建立好的虚拟主机上右键设置 > 共享文件夹 > 添加共享文件夹
-> 3. 共享文件夹路径选择docker目录，共享文件夹名称：docker
-> 4. 选中固定分配（如果有此项），不选中自动挂载
+此版本laradock是基于[原作者](https://github.com/LaraDock/laradock)的代码，修改后以适用中国境内。
 
-##### 第二步
+### 环境要求
 
-> 在GIT终端中（任何支持tty的终端，如docker quickstart,mintty等）进入docker目录
+> windows10专业版、旗舰版、教育版等支持Microsoft Hyper-V的版本，并更新到10586以上
 
-```
+### 配置加速器
+
+> [docker官网](https://www.docker.com/products/docker#/windows)下载最新的docker安装程序，并安装完成。
+>
+> [daocloud](https://www.daocloud.io/)注册并登录，在控制台导航上点击进入加速器页面，点击windows标签，并按提示操作
+
+### 配置共享卷
+在桌面右下角状态栏中右键 docker 图标 Setting > Shared Drivers，选中你想要存放volumes和laradock的硬盘盘符，点击右下角apply
+
+> 注意如果你的windows没有为administrator配置密码需要先行配置（或许其它用户也可以，但我没有试过，如果你当前不是administrator用户，可以试一下）
+
+### 安装容器
+
+> 拉取laradock库：
+
+```powershell
 git clone https://github.com/callect/laradock.git
-cd laradock
 ```
 
-##### 第三步
+> 进入到laradock文件夹内，运行容器
 
-> SSH方式进入docker主机，为docker安装daocloud加速器
-
-```
-docker-machine ssh default
-sudo sed -i "s|EXTRA_ARGS='|EXTRA_ARGS='--registry-mirror=加速地址 |g" /var/lib/boot2docker/profile
-exit
-docker-machine restart default
+```powershell
+docker-compose up -d  nginx mysql
 ```
 
-##### 第四步
+> 进入容器，Do what you want
 
-> 1. 根据执行结果提示执行`docker-machine env` 等命令。
-> 2. 确认当前目录为之前进入的docker/laradock中，建立并激活容器
-
-```
-docker-compose up -d nginx mysql
-```
-
-##### 第五步
-
-> 将docker目录挂载于容器
-
-```
-docker-machine ssh default
-sudo mount -t vboxsf docker /www
-```
-
-##### 第六步
-
-> 重载容器
-
-```
-docker-compose down
-docker-compose up -d nginx mysql
-```
-
-##### 第七步
-
-> 安装laravel
-
-```
-docker exec -it laradock_workspace_1 bash
-composer create-project laravel/laravel bms "5.3.*"
-```
-
-##### 第八步
-
-> 重复第六步
-
-##### 第九步
-
-> 在浏览器输入docker主机的IP
-
-**Bingo!**
-
-
-
-#### 问题调试
-
-##### 安装nodejs组件出现了 error, symlink
-
-> 使用-no-bin-links参数
-
-```
-npm install bower --registry=http://r.cnpmjs.org --no-bin-links
-```
-
-##### 安装nodejs组件时提示没有权限
-
-> 运行容器时指定用户：laradock
-
-```
+```powershell
 docker exec -it --user=laradock laradock_workspace_1 bash
 ```
 
+至此，laradock容器已经激活运行了
+
+注：nginx站点配置laravel.conf中站点根路径请自行修改
+
+其它laradock配置见[原文档](https://github.com/LaraDock/laradock/blob/master/README.md)
