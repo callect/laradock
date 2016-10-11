@@ -14,10 +14,11 @@ services:
                 - INSTALL_DRUSH=false
                 - INSTALL_AEROSPIKE_EXTENSION=false
                 - COMPOSER_GLOBAL_INSTALL=false
-                - INSTALL_WORKSPACE_SSH=true
+                - INSTALL_WORKSPACE_SSH=false
                 - PUID=1000
                 - PGID=1000
                 - NODE_VERSION=stable
+                - TZ=UTC
         volumes_from:
             - volumes_source
         extra_hosts:
@@ -291,10 +292,7 @@ services:
         image: tianon/true
         volumes:
             - ../:/var/www/laravel
-            - ../hello:/var/www/laravel/hello
-            # Demonstration of how to mount multiple sites
-            # - ../../site_a/:/var/www/site_a
-            # - ../../site_b/:/var/www/site_b
+
 
 ### Databases Data Container ################################
 
